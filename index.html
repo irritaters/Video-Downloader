@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#070b22">
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("mks-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia && matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+<title>MKS – Save videos and audio in high quality</title>
+<meta name="description" content="Paste a link and download the video in high quality or just the audio. Free, fast and simple.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+  @property --angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+
+  :root {
+    --void: #070b22;
+    --deep: #0d1436;
+    --slab: rgba(255, 255, 255, .06);
+    --line: rgba(160, 190, 255, .18);
+    --ice: #eaf2ff;
+    --mute: #9fb0d6;
+    --cyan: #5ce1ff;
+    --violet: #8f7cff;
+    --danger: #ff8aa0;
+    --radius: 22px;
+    --link: #5ce1ff;
+    --faint: #7386b3;
+    --field: rgba(255, 255, 255, .05);
+    --hover: rgba(255, 255, 255, .11);
+    --row: rgba(255, 255, 255, .04);
+    --tabs-bg: rgba(0, 0, 0, .25);
+    --glow1: rgba(143, 124, 255, .35);
+    --glow2: rgba(92, 225, 255, .22);
+    --slab-shadow: rgba(92, 225, 255, .35);
+  }
+  html[data-theme="light"] {
+    --void: #f3f6ff;
+    --deep: #ffffff;
+    --slab: rgba(255, 255, 255, .75);
+    --line: rgba(40, 70, 150, .2);
+    --ice: #0d1436;
+    --mute: #4a5b85;
+    --cyan: #16b8e0;
+    --violet: #7b6cff;
+    --danger: #d6284a;
+    --link: #0a6fa0;
+    --faint: #62729c;
+    --field: rgba(13, 20, 54, .04);
+    --hover: rgba(13, 20, 54, .07);
+    --row: rgba(13, 20, 54, .035);
+    --tabs-bg: rgba(13, 20, 54, .07);
+    --glow1: rgba(143, 124, 255, .22);
+    --glow2: rgba(92, 225, 255, .25);
+    --slab-shadow: rgba(80, 100, 200, .28);
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  html[data-theme="light"] { color-scheme: light; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: "Sora", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--ice);
+    background:
+      radial-gradient(60vw 50vh at 85% -10%, var(--glow1), transparent 70%),
+      radial-gradient(55vw 45vh at 5% 105%, var(--glow2), transparent 70%),
+      var(--void);
+    background-attachment: fixed;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; border-radius: 10px; }
+
+  .wrap { width: min(760px, 100% - 32px); margin: 0 auto; padding: 28px 0 64px; }
+
+  header { display: flex; align-items: center; gap: 12px; padding-bottom: 8px; }
+  .logo {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: conic-gradient(from 210deg, var(--cyan), var(--violet), var(--cyan));
+    display: grid; place-items: center;
+  }
+  .logo svg { width: 20px; height: 20px; }
+  header b { font-size: 1.2rem; letter-spacing: .02em; }
+
+  .theme {
+    margin-left: auto;
+    width: 44px; height: 44px; padding: 0;
+    border-radius: 14px;
+    display: grid; place-items: center;
+  }
+  .theme svg { width: 22px; height: 22px; }
+  .theme .sun { display: none; }
+  html[data-theme="light"] .theme .sun { display: block; }
+  html[data-theme="light"] .theme .moon { display: none; }
+  body, .slab, #result, .field input, .options li { transition: background-color .25s, border-color .25s, color .25s; }
+
+  h1 {
+    font-size: clamp(2rem, 6.2vw, 3.4rem);
+    line-height: 1.1;
+    font-weight: 700;
+    margin: 56px 0 14px;
+    letter-spacing: -.02em;
+  }
+  .lead { color: var(--mute); margin: 0 0 32px; max-width: 46ch; }
+
+  /* The one memorable element: a control slab with a slowly orbiting light on its edge */
+  .slab {
+    position: relative;
+    padding: 18px;
+    border-radius: var(--radius);
+    background: linear-gradient(var(--deep), var(--deep)) padding-box,
+                conic-gradient(from var(--angle), transparent 0 55%, var(--cyan), var(--violet), transparent 90%) border-box;
+    border: 2px solid transparent;
+    animation: orbit 7s linear infinite;
+    box-shadow: 0 30px 80px -30px var(--slab-shadow);
+  }
+  @keyframes orbit { to { --angle: 360deg; } }
+
+  .field { display: flex; gap: 10px; flex-wrap: wrap; }
+  .field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .field input {
+    flex: 1 1 260px;
+    min-width: 0;
+    height: 58px;
+    padding: 0 18px;
+    font: inherit;
+    color: var(--ice);
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+  }
+  .field input::placeholder { color: var(--faint); }
+
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    border-radius: 16px;
+    height: 58px;
+    padding: 0 22px;
+    font-weight: 600;
+    color: var(--ice);
+    background: var(--slab);
+    border: 1px solid var(--line);
+    transition: transform .15s, background .15s;
+  }
+  button:hover:not(:disabled) { transform: translateY(-1px); background: var(--hover); }
+  button:disabled { opacity: .55; cursor: progress; }
+  button.go {
+    color: #04122b;
+    border: 0;
+    background: linear-gradient(135deg, var(--cyan), var(--violet));
+  }
+  button.go:hover:not(:disabled) { background: linear-gradient(135deg, #8aecff, #a99bff); }
+
+  #status { min-height: 1.6em; margin: 18px 4px 0; color: var(--mute); }
+  #status.err { color: var(--danger); }
+  .grad { background: linear-gradient(120deg, var(--cyan), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .field input { height: 62px; font-size: 1.02rem; transition: border-color .2s, box-shadow .2s; }
+  .field input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(92, 225, 255, .18); }
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 2px 0; }
+  .pills span { padding: 6px 14px; border-radius: 999px; font-size: .85rem; color: var(--mute); border: 1px solid var(--line); background: var(--field); }
+  .options li { transition: border-color .2s, transform .2s; }
+  .options li:hover { border-color: var(--cyan); transform: translateY(-1px); }
+  .bar { height: 8px; margin: 10px 4px 0; border-radius: 999px; background: var(--field); overflow: hidden; }
+  .bar[hidden] { display: none; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width .4s ease; }
+  .bar.wait i { width: 35%; animation: slide 1.2s ease-in-out infinite; }
+  @keyframes slide { from { margin-left: -35%; } to { margin-left: 100%; } }
+
+  /* Result */
+  #result[hidden] { display: none; }
+  #result {
+    margin-top: 22px;
+    padding: 18px;
+    border-radius: var(--radius);
+    background: var(--slab);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    animation: reveal .45s ease-out;
+  }
+  @keyframes reveal { from { opacity: 0; transform: translateY(14px); } }
+
+  .media { display: flex; gap: 16px; align-items: center; }
+  .media img {
+    width: 150px; aspect-ratio: 16 / 9; object-fit: cover;
+    border-radius: 14px; background: var(--deep); flex: none;
+  }
+  .media h2 { margin: 0 0 4px; font-size: 1.05rem; line-height: 1.35; overflow-wrap: anywhere; }
+  .media p { margin: 0; color: var(--mute); font-size: .92rem; }
+
+  .tabs {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    margin: 18px 0 14px; padding: 5px;
+    border-radius: 16px; background: var(--tabs-bg);
+  }
+  .tabs button { height: 46px; background: transparent; border: 0; color: var(--mute); }
+  .tabs button[aria-selected="true"] { color: #04122b; background: linear-gradient(135deg, var(--cyan), var(--violet)); }
+
+  .wm { display: flex; align-items: center; gap: 10px; margin: 0 2px 14px; cursor: pointer; }
+  .wm input { width: 20px; height: 20px; accent-color: var(--cyan); flex: none; }
+  .wm small { color: var(--mute); }
+  .wm[hidden] { display: none; }
+
+  .options { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .options li {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    padding: 12px 12px 12px 18px;
+    border-radius: 16px;
+    background: var(--row);
+    border: 1px solid var(--line);
+  }
+  .options small { display: block; color: var(--mute); font-size: .82rem; }
+  .options button { height: 46px; }
+
+  footer { margin-top: 48px; color: var(--faint); font-size: .85rem; max-width: 60ch; }
+
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    h1 { margin-top: 36px; }
+    .field button { flex: 1 1 100%; }
+    .media { flex-direction: column; align-items: flex-start; }
+    .media img { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .slab, .bar.wait i { animation: none; }
+    #result { animation: none; }
+    button, body, .slab, #result, .field input, .options li { transition: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#04122b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-5-5m5 5l5-5M5 20h14"/></svg>
+    </span>
+    <b>MKS</b>
+    <button id="theme" type="button" class="theme" aria-label="Switch to light mode" title="Switch theme">
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <h1>Paste a link. Get the <span class="grad">video or the audio.</span></h1>
+    <p class="lead">Free and simple. Choose your quality, then download.</p>
+
+    <div class="slab">
+      <div class="field">
+        <label for="url">Video link</label>
+        <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="Paste a video link here">
+        <button id="paste" type="button" class="go">Paste</button>
+        <button id="fetch" type="button" class="go" hidden>Get options</button>
+      </div>
+    </div>
+
+    <div class="pills"><span>HD quality</span><span>MP3 &amp; M4A</span><span>No watermark option</span><span>No sign-up</span></div>
+
+    <div id="status" role="status" aria-live="polite"></div>
+    <div id="bar" class="bar" hidden><i></i></div>
+
+    <section id="result" hidden aria-label="Download options">
+      <div class="media">
+        <img id="thumb" alt="">
+        <div>
+          <h2 id="title"></h2>
+          <p id="meta"></p>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tab-video" aria-selected="true">Video</button>
+        <button role="tab" id="tab-audio" aria-selected="false">Audio only</button>
+      </div>
+
+      <label class="wm" id="wm-row">
+        <input type="checkbox" id="nowm" checked>
+        <span>Without watermark <small>(when the site offers a clean copy)</small></span>
+      </label>
+
+      <ul class="options" id="options"></ul>
+    </section>
+  </main>
+
+  <footer>
+    Only download content you own or have permission to save. Respect creators and each platform's terms of use.
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+
+  // Light / dark theme
+  const root = document.documentElement, themeBtn = $("#theme");
+  const metaTheme = document.querySelector('meta[name="theme-color"]');
+  function applyTheme(t, save) {
+    root.setAttribute("data-theme", t);
+    metaTheme.setAttribute("content", t === "light" ? "#f3f6ff" : "#070b22");
+    themeBtn.setAttribute("aria-label", t === "light" ? "Switch to dark mode" : "Switch to light mode");
+    if (save) { try { localStorage.setItem("mks-theme", t); } catch (e) {} }
+  }
+  applyTheme(root.getAttribute("data-theme"), false);
+  themeBtn.addEventListener("click", () =>
+    applyTheme(root.getAttribute("data-theme") === "light" ? "dark" : "light", true));
+  if (window.matchMedia) {
+    matchMedia("(prefers-color-scheme: light)").addEventListener("change", (e) => {
+      let saved = null;
+      try { saved = localStorage.getItem("mks-theme"); } catch (x) {}
+      if (!saved) applyTheme(e.matches ? "light" : "dark", false);
+    });
+  }
+  const urlInput = $("#url"), statusEl = $("#status"), fetchBtn = $("#fetch");
+  let info = null, mode = "video";
+
+  function say(msg, isError = false) {
+    statusEl.textContent = msg;
+    statusEl.classList.toggle("err", isError);
+  }
+  urlInput.addEventListener("keydown", (e) => { if (e.key === "Enter") getInfo(); });
+
+  // Fetch automatically as soon as a link is pasted (Ctrl+V, long-press paste, or the Paste button).
+  let lastUrl = "", reqId = 0;
+  const looksLikeUrl = (v) => /^https?:\/\/\S+\.\S+/i.test(v);
+  function autoFetch() {
+    const v = urlInput.value.trim();
+    if (looksLikeUrl(v) && v !== lastUrl) getInfo();
+  }
+  urlInput.addEventListener("paste", () => setTimeout(autoFetch, 50));
+  let typing;
+  urlInput.addEventListener("input", () => { clearTimeout(typing); typing = setTimeout(autoFetch, 700); });
+
+  const bar = $("#bar");
+  function setBar(pct) {
+    if (pct === null) { bar.hidden = true; return; }
+    bar.hidden = false;
+    bar.classList.toggle("wait", pct === 0);
+    bar.firstElementChild.style.width = pct === 0 ? "" : pct + "%";
+  }
+
+  $("#paste").addEventListener("click", async () => {
+    try {
+      urlInput.value = (await navigator.clipboard.readText()).trim();
+      urlInput.focus();
+      autoFetch();
+    } catch {
+      say("Your browser blocked pasting. Press Ctrl+V (or long-press) in the box instead.", true);
+    }
+  });
+
+  const label = (h) =>
+    h >= 4320 ? "8K (4320p)" : h >= 2160 ? "4K (2160p)" : h >= 1440 ? "2K (1440p)" : h >= 1080 ? "Full HD (1080p)" :
+    h >= 720 ? "HD (720p)" : h + "p";
+
+  const fmtSize = (b) => {
+    if (!b) return "";
+    const mb = b / 1048576;
+    if (mb < 1) return Math.max(1, Math.round(b / 1024)) + " KB";
+    if (mb < 1024) return (mb < 10 ? mb.toFixed(1) : Math.round(mb)) + " MB";
+    return (mb / 1024).toFixed(2) + " GB";
+  };
+  const withSize = (note, bytes) => (bytes ? note + "  •  about " + fmtSize(bytes) : note);
+  const mp3Size = (kbps) => (info.duration ? info.duration * kbps * 125 : null);
+
+  const fmtTime = (s) => {
+    if (!s) return "";
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = Math.floor(s % 60);
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
+  };
+
+  async function getInfo() {
+    const url = urlInput.value.trim();
+    if (!url) { say("Paste a video link first.", true); return; }
+    $("#result").hidden = true;
+    lastUrl = url;
+    const my = ++reqId;
+    fetchBtn.disabled = true;
+    say("Looking up your video…");
+    try {
+      const r = await fetch("/api/info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = await r.json();
+      if (my !== reqId) return;          // a newer link was pasted meanwhile
+      if (!r.ok) throw new Error(data.error || "Something went wrong.");
+      info = data;
+      render();
+      say("");
+    } catch (e) {
+      if (my !== reqId) return;
+      lastUrl = "";                       // allow the same link to be tried again
+      say(e.message || "Something went wrong. Please try again.", true);
+    } finally {
+      if (my === reqId) fetchBtn.disabled = false;
+    }
+  }
+  fetchBtn.addEventListener("click", getInfo);
+
+  function render() {
+    $("#thumb").src = info.thumbnail || "";
+    $("#title").textContent = info.title;
+    $("#meta").textContent = [info.uploader, fmtTime(info.duration)].filter(Boolean).join("  •  ");
+    $("#result").hidden = false;
+    setMode("video");
+  }
+
+  function setMode(m) {
+    mode = m;
+    $("#wm-row").hidden = m !== "video";
+    $("#tab-video").setAttribute("aria-selected", m === "video");
+    $("#tab-audio").setAttribute("aria-selected", m === "audio");
+    const list = $("#options");
+    list.textContent = "";
+
+    const rows = m === "video"
+      ? (info.options.length
+          ? info.options.map((o) => ({
+              name: label(o.quality), note: withSize("MP4 with sound", o.size), params: { type: "video", height: o.height } }))
+          : [{ name: "Best available", note: "MP4 with sound", params: { type: "video" } }])
+      : [
+          { name: "MP3 – 320 kbps", note: withSize("Highest quality, biggest file", mp3Size(320)), params: { type: "mp3", quality: 320 } },
+          { name: "MP3 – 256 kbps", note: withSize("High quality", mp3Size(256)), params: { type: "mp3", quality: 256 } },
+          { name: "MP3 – 192 kbps", note: withSize("Balanced, good for most people", mp3Size(192)), params: { type: "mp3", quality: 192 } },
+          { name: "MP3 – 128 kbps", note: withSize("Small file, fine for talks and phones", mp3Size(128)), params: { type: "mp3", quality: 128 } },
+          { name: "M4A – original audio", note: withSize("No conversion, best sound for its size", info.m4a_size), params: { type: "m4a" } },
+        ];
+
+    rows.forEach((row) => {
+      const li = document.createElement("li");
+      const text = document.createElement("div");
+      const strong = document.createElement("strong");
+      strong.textContent = row.name;
+      const small = document.createElement("small");
+      small.textContent = row.note;
+      text.append(strong, small);
+      const btn = document.createElement("button");
+      btn.className = "go";
+      btn.type = "button";
+      btn.textContent = "Download";
+      btn.addEventListener("click", () => save(row.params, btn));
+      li.append(text, btn);
+      list.append(li);
+    });
+  }
+  $("#tab-video").addEventListener("click", () => setMode("video"));
+  $("#tab-audio").addEventListener("click", () => setMode("audio"));
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  function sayLink(msg, href, text) {
+    statusEl.classList.remove("err");
+    statusEl.textContent = msg + " ";
+    const a = document.createElement("a");
+    a.href = href;
+    a.textContent = text;
+    a.style.color = "var(--link)";
+    statusEl.append(a);
+  }
+
+  // Step 1: ask the server to prepare the file. Step 2: wait. Step 3: normal browser download.
+  async function save(params, btn) {
+    const all = document.querySelectorAll("#options button");
+    all.forEach((b) => (b.disabled = true));
+    btn.textContent = "Preparing…";
+    say("Preparing your file…");
+    setBar(0);
+    try {
+      const r = await fetch("/api/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: urlInput.value.trim(), ...params, nowm: params.type === "video" && $("#nowm").checked }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Download failed. Please try again.");
+
+      const started = Date.now();
+      for (;;) {
+        await sleep(1000);
+        const sr = await fetch("/api/status/" + d.id);
+        const st = await sr.json().catch(() => ({}));
+        if (!sr.ok) throw new Error(st.error || "Something went wrong. Please try again.");
+        if (st.state === "error") throw new Error(st.error || "Download failed. Please try again.");
+        if (st.state === "ready") {
+          const link = "/api/file/" + d.id;
+          const a = document.createElement("a");
+          a.href = link;
+          a.download = st.filename || "";
+          document.body.append(a);
+          a.click();
+          a.remove();
+          setBar(100);
+          setTimeout(() => setBar(null), 1500);
+          sayLink("Done. Your download has started.", link, "Didn't start? Click here.");
+          return;
+        }
+        const secs = Math.round((Date.now() - started) / 1000);
+        const pct = st.progress || 0;
+        if (st.state === "queued") { say("Waiting for a free slot…"); setBar(0); }
+        else { say(pct ? "Preparing your file… " + pct + "%" : "Preparing your file…"); setBar(pct); }
+        if (secs > 900) throw new Error("This is taking too long. Please try again.");
+      }
+    } catch (e) {
+      setBar(null);
+      say(e.message || "Something went wrong. Please try again.", true);
+    } finally {
+      all.forEach((b) => (b.disabled = false));
+      btn.textContent = "Download";
+    }
+  }
+})();
+</script>
+</body>
+</html>
